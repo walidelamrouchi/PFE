@@ -1,0 +1,20 @@
+
+# Netlify configuration file
+
+# Build settings
+[build]
+  # Directory with the built files (default Vite output)
+  publish = "dist"
+  # Build command for your Vite application
+  command = "npm run build"
+
+# Handle SPA routing (for React Router)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Environment variable settings
+[build.environment]
+  # Set Node version
+  NODE_VERSION = "18"

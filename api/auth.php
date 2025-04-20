@@ -11,18 +11,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Inscription d'un nouvel utilisateur
         $username = $_POST['username']; // Récupérer le nom d'utilisateur
         $password = $_POST['password']; // Récupérer le mot de passe
+        $email = $_POST['email']; // Récupérer l'adresse e-mail
 
         // Hachage du mot de passe pour le stocker en toute sécurité
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
         // Requête pour insérer l'utilisateur dans la base de données
-        $query = "INSERT INTO users (username, password) VALUES ('$username', '$hashed_password')";
+        $query = "INSERT INTO users (username, password , email) VALUES ('$username', '$hashed_password' , '$email')";
         if (mysqli_query($connection, $query)) {
             echo json_encode(['status' => 'success']); // Réponse en cas de succès
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Erreur lors de l\'inscription']);
         }
-    } elseif ($action === 'login') {
+    } else if ($action === 'login') {
         // Connexion d'un utilisateur
         $username = $_POST['username']; // Récupérer le nom d'utilisateur
         $password = $_POST['password']; // Récupérer le mot de passe
