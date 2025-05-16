@@ -36,7 +36,7 @@ const Hero = () => {
         }`}  >
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
             <span className="block" style={{color: 'white'}}>Retrouvez vos objets perdus</span>
-            <span className="block text-primary mt-2"style={{color: '#3865DF'}}>à la faculté SMBA Taza</span>
+            <span className="block text-primary mt-2"style={{color: 'rgb(2, 89, 72)'}}>à la faculté SMBA Taza</span>
           </h1>
           
           <p className="mx-auto max-w-2xl text-lg  mb-10" style={{color: 'rgb(255, 255, 255)' , fontWeight:"500"}}>
