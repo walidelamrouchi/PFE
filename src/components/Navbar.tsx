@@ -46,18 +46,33 @@ const Navbar = () => {
             </Link>
           </div>
           
-          <nav className={`hidden md:flex space-x-8` } >
-            <Link to="/" className="flex items-center gap-1 text-foreground hover:text-primary transition-colors text-white">
+          <nav className="hidden md:flex space-x-8  " >
+            <Link 
+              to="/" 
+              className={`flex items-center gap-1 hover:text-primary transition-colors ${
+                isScrolled ? 'text-gray-900' : 'text-emerald-600'
+              }`}
+            >
               <Home size={16} />
               Accueil
             </Link>
             
-            <Link to="/objects" className="flex items-center gap-1 text-foreground hover:text-primary transition-colors text-white">
+            <Link 
+              to="/objects" 
+              className={`flex items-center gap-1 hover:text-primary transition-colors ${
+                isScrolled ? 'text-gray-900' : 'text-emerald-600'
+              }`}
+            >
               <Search size={16} />
               Recherche Objets
             </Link>
             
-            <Link to="/declare-item" className="flex items-center gap-1 text-foreground hover:text-primary transition-colors text-white">
+            <Link 
+              to="/declare-item" 
+              className={`flex items-center gap-1 hover:text-primary transition-colors ${
+                isScrolled ? 'text-gray-900' : 'text-emerald-600'
+              }`}
+            >
               <FileSignature size={16} />
               Déclarer
             </Link>
@@ -80,6 +95,7 @@ const Navbar = () => {
               size="sm"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               aria-label="Menu"
+              className={isScrolled ? 'text-gray-900' : 'text-gray-600'}
             >
               {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </Button>
@@ -92,7 +108,7 @@ const Navbar = () => {
           <div className="px-4 pt-2 pb-6 space-y-4">
             <Link 
               to="/objects" 
-              className="flex items-center gap-1 block py-2 text-foreground hover:text-primary transition-colors"
+              className="flex items-center gap-1 block py-2 text-gray-900 hover:text-primary transition-colors"
               onClick={() => setIsMenuOpen(false)}
             >
               <Search size={16} />
@@ -100,7 +116,7 @@ const Navbar = () => {
             </Link>
             <Link 
               to="/" 
-              className="flex items-center gap-1 block py-2 text-foreground hover:text-primary transition-colors"
+              className="flex items-center gap-1 block py-2 text-gray-900 hover:text-primary transition-colors"
               onClick={() => setIsMenuOpen(false)}
             >
               <Home size={16} />
@@ -108,7 +124,7 @@ const Navbar = () => {
             </Link>
             <Link 
               to="/declare-item" 
-              className="flex items-center gap-1 block py-2 text-foreground hover:text-primary transition-colors"
+              className="flex items-center gap-1 block py-2 text-gray-900 hover:text-primary transition-colors"
               onClick={() => setIsMenuOpen(false)}
             >
               <FileSignature size={16} />
