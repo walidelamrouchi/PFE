@@ -10,7 +10,7 @@ const Footer = () => {
           <div className="md:col-span-2">
             <Link to="/" className="flex items-center">
               <span className="text-xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
-                ObjetsRetrouvés
+                FINDIT
               </span>
             </Link>
             <p className="mt-4 text-muted-foreground max-w-md">
@@ -47,13 +47,10 @@ const Footer = () => {
                 Faculté SMBA Taza
               </li>
               <li className="text-muted-foreground">
-                Campus universitaire, Taza
+                oualid.elamrouchi@usmba.ac.ma
               </li>
               <li className="text-muted-foreground">
-                contact@objetsretrouves.ma
-              </li>
-              <li className="text-muted-foreground">
-                +212 5XX XX XX XX
+                +212 633010346
               </li>
             </ul>
           </div>
