@@ -21,11 +21,7 @@ const Hero = () => {
        <div 
           className="absolute inset-0 bg-cover bg-center" 
           style={{ 
-            backgroundImage: 'linear-gradient( to right ,rgba(0, 0, 33, 0.65) ,rgba(0, 79, 226, 0)) , url("/backgroundtaza.png")',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            filter: 'brightness(.8)',
-            zIndex: -1,
+            backgroundColor : '#C8EDFD',
           }}
         />
        
@@ -35,26 +31,27 @@ const Hero = () => {
           isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
         }`}  >
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
-            <span className="block" style={{color: 'white'}}>Retrouvez vos objets perdus</span>
+            <span className="block" >Retrouvez vos objets perdus</span>
             <span className="block text-primary mt-2"style={{color: 'rgb(13, 52, 182)'}}>à la faculté SMBA Taza</span>
           </h1>
           
-          <p className="mx-auto max-w-2xl text-lg  mb-10" style={{color: 'rgb(255, 255, 255)' , fontWeight:"500"}}>
+          <p className="mx-auto max-w-2xl text-lg  mb-10" >
             Plateforme dédiée aux étudiants et au personnel pour faciliter la déclaration 
             et la recherche d'objets perdus ou trouvés sur le campus.
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-xl mx-auto">
-            <Button asChild className="w-full sm:w-auto h-12 px-8 flex items-center gap-2">
-              <Link to="/objects">
-                <Search className="h-5 w-5" />
-                Rechercher un objet
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="w-full sm:w-auto h-12 px-8 flex items-center gap-2">
+           
+            <Button asChild variant="outline" className="border-none w-full sm:w-auto h-12 px-8 flex items-center gap-2">
               <Link to="/declare-item">
                 <FileSignature className="h-5 w-5" />
-                Déclarer un objet
+                J'ai perdu
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="bg-[#57B39F] border-none w-full sm:w-auto h-12 px-8 flex items-center gap-2">
+              <Link to="/declare-item">
+                <FileSignature className="h-5 w-5" />
+                J'ai  trouvé
               </Link>
             </Button>
           </div>

@@ -27,6 +27,8 @@ const formSchema = z.object({
   date: z.date(),
   imageUrl: z.string().optional(),
   email: z.string().email("Format d'email invalide").optional(),
+  authQuestion: z.string().min(5, "La question doit contenir au moins 5 caractères"),
+  authAnswer: z.string().min(10, "La réponse doit contenir au moins 10 caractères"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -57,6 +59,8 @@ const DeclareItem = () => {
       date: new Date(),
       imageUrl: "",
       email: registeredEmail,
+      authQuestion: "",
+      authAnswer: "",
     }
   });
 
@@ -119,6 +123,134 @@ const DeclareItem = () => {
       <div className="bg-white shadow-md rounded-lg p-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Type */}
+            <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Type de déclaration</FormLabel>
+                  <Select
+                    disabled={isLoading}
+                    onValueChange={field.onChange}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner un type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="lost">Objet perdu</SelectItem>
+                      <SelectItem value="found">Objet trouvé</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Lieu */}
+            <FormField
+              control={form.control}
+              name="location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    {form.watch("type") === 'lost'
+                      ? 'Lieu de perte (approximatif)'
+                      : 'Lieu de découverte'}
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      disabled={isLoading}
+                      placeholder="Ex: Faculté des Sciences, Bibliothèque, etc."
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Date */}
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>
+                    {form.watch("type") === 'lost'
+                      ? 'Date de perte (approximative)'
+                      : 'Date de découverte'}
+                  </FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant={'outline'}
+                          className={cn(
+                            'w-full pl-3 text-left font-normal',
+                            !field.value && 'text-muted-foreground'
+                          )}
+                          disabled={isLoading}
+                        >
+                          {field.value ? (
+                            format(field.value, 'PPP', { locale: fr })
+                          ) : (
+                            <span>Sélectionner une date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) =>
+                          date > new Date() || date < new Date('1900-01-01')
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Catégorie */}
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Catégorie</FormLabel>
+                  <Select
+                    disabled={isLoading}
+                    onValueChange={field.onChange}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner une catégorie" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             {/* Titre */}
             <FormField
               control={form.control}
@@ -158,184 +290,7 @@ const DeclareItem = () => {
               )}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Catégorie */}
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Catégorie</FormLabel>
-                    <Select
-                      disabled={isLoading}
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner une catégorie" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Type */}
-              <FormField
-                control={form.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Type de déclaration</FormLabel>
-                    <Select
-                      disabled={isLoading}
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner un type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="lost">Objet perdu</SelectItem>
-                        <SelectItem value="found">Objet trouvé</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Lieu */}
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      {form.watch("type") === 'lost'
-                        ? 'Lieu de perte (approximatif)'
-                        : 'Lieu de découverte'}
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        disabled={isLoading}
-                        placeholder="Ex: Parc des Bastions, Genève"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Date */}
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>
-                      {form.watch("type") === 'lost'
-                        ? 'Date de perte (approximative)'
-                        : 'Date de découverte'}
-                    </FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={'outline'}
-                            className={cn(
-                              'w-full pl-3 text-left font-normal',
-                              !field.value && 'text-muted-foreground'
-                            )}
-                            disabled={isLoading}
-                          >
-                            {field.value ? (
-                              format(field.value, 'PPP', { locale: fr })
-                            ) : (
-                              <span>Sélectionner une date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date > new Date() || date < new Date('1900-01-01')
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Email de contact */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <FormLabel>Email de contact</FormLabel>
-                <RadioGroup 
-                  defaultValue="registered" 
-                  className="flex flex-col space-y-2"
-                  onValueChange={(value) => handleEmailChoiceChange(value as "registered" | "custom")}
-                  value={emailChoice}
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="registered" id="registered" disabled={isLoading} />
-                    <FormLabel htmlFor="registered" className="cursor-pointer font-normal">
-                      Utiliser mon email d'inscription ({registeredEmail})
-                    </FormLabel>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="custom" id="custom" disabled={isLoading} />
-                    <FormLabel htmlFor="custom" className="cursor-pointer font-normal">
-                      Utiliser un autre email
-                    </FormLabel>
-                  </div>
-                </RadioGroup>
-              </div>
-              
-              {emailChoice === "custom" && (
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email personnalisé</FormLabel>
-                      <FormControl>
-                        <Input
-                          disabled={isLoading}
-                          placeholder="votre@email.com"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-            </div>
-
+           
             {/* Image */}
             <div className="space-y-2">
               <FormLabel>Image de l'objet (optionnel)</FormLabel>
@@ -383,6 +338,101 @@ const DeclareItem = () => {
                   </ul>
                 </div>
               </div>
+            </div>
+
+            {/* Question d'authentification - uniquement pour les objets perdus */}
+            {form.watch("type") === "lost" && (
+              <div className="space-y-4 border-t pt-6 mt-6">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold">Sécurisez votre objet</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Ajoutez une question d'authentification qui permettra de prouver votre bonne foi. 
+                    Donnez une information que vous êtes le seul à connaître sur votre objet.
+                  </p>
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="authQuestion"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Choisissez la question qui ne laissera aucun doute</FormLabel>
+                      <FormControl>
+                        <Input
+                          disabled={isLoading}
+                          placeholder="Ex: Quelle est la marque exacte de l'objet ?"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="authAnswer"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Répondez à votre question avec détails et précision</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          disabled={isLoading}
+                          placeholder="Ex: C'est un iPhone 12 Pro Max de 256GB en couleur Graphite, avec une coque en cuir noir Apple..."
+                          className="resize-none min-h-[100px]"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
+             {/* Email de contact */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <FormLabel>Email de contact</FormLabel>
+                <RadioGroup 
+                  defaultValue="registered" 
+                  className="flex flex-col space-y-2"
+                  onValueChange={(value) => handleEmailChoiceChange(value as "registered" | "custom")}
+                  value={emailChoice}
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="registered" id="registered" disabled={isLoading} />
+                    <FormLabel htmlFor="registered" className="cursor-pointer font-normal">
+                      Utiliser mon email d'inscription ({registeredEmail})
+                    </FormLabel>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="custom" id="custom" disabled={isLoading} />
+                    <FormLabel htmlFor="custom" className="cursor-pointer font-normal">
+                      Utiliser un autre email
+                    </FormLabel>
+                  </div>
+                </RadioGroup>
+              </div>
+              
+              {emailChoice === "custom" && (
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email personnalisé</FormLabel>
+                      <FormControl>
+                        <Input
+                          disabled={isLoading}
+                          placeholder="votre@email.com"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
             </div>
 
             {/* Bouton de soumission */}

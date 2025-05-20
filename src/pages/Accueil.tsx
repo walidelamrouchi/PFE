@@ -66,13 +66,13 @@ const Accueil = () => {
     },
     {
       number: '02',
-      title: 'Système de correspondance',
-      description: 'Notre système intelligent vous aide à trouver des correspondances potentielles avec d\'autres objets.',
+      title: 'Prouvez la propriété de votre objet',
+      description: 'Une fois l\'objet perdu « matché », prouvez qui vous êtes grâce à une question de sécurité.',
     },
     {
       number: '03',
       title: 'Contactez et récupérez',
-      description: 'Une fois la correspondance établie, organisez la récupération directement avec l\'autre personne.',
+      description: 'Dès que vous êtes authentifié, vous recevez les informations pour passer le récupérer ou vous faire livrer. Pensez à bien communiquer le numéro de référence trouvé.',
     },
   ];
 
