@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, X, Home, Search, FileSignature, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,6 +23,7 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<UserData | null>(null);
 
@@ -49,7 +50,7 @@ const Navbar = () => {
   // Vérifier l'état de connexion au chargement et lors des changements de route
   useEffect(() => {
     checkAuthStatus();
-  }, [window.location.pathname]);
+  }, [location.pathname]);
 
   useEffect(() => {
     const handleScroll = () => {

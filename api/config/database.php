@@ -1,27 +1,29 @@
 <?php
 class Database {
-    private $host = "localhost";
-    private $db_name = "findit";
-    private $username = "root";
-    private $password = "";
-    public $conn;
+    private const HOST = "localhost";
+    private const DB_NAME = "findit";
+    private const USERNAME = "root";
+    private const PASSWORD = "";
+    private $conn;
 
     public function getConnection() {
         $this->conn = null;
 
         try {
             $this->conn = new PDO(
-                "mysql:host=" . $this->host . ";dbname=" . $this->db_name,
-                $this->username,
-                $this->password
+                "mysql:host=" . self::HOST . ";dbname=" . self::DB_NAME . ";charset=utf8mb4",
+                self::USERNAME,
+                self::PASSWORD,
+                [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_EMULATE_PREPARES => false
+                ]
             );
-            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $this->conn->exec("set names utf8");
+            return $this->conn;
         } catch(PDOException $e) {
-            echo "Erreur de connexion : " . $e->getMessage();
+            throw new Exception("Erreur de connexion à la base de données: " . $e->getMessage());
         }
-
-        return $this->conn;
     }
 }
 ?> 

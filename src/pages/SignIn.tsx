@@ -17,8 +17,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { API_URL } from '@/config/api';
-
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Adresse email invalide' }),
@@ -34,7 +32,6 @@ const SignIn = () => {
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
   
-  // Get the redirect path from location state or default to home
   const from = location.state?.from || '/';
 
   const form = useForm<FormValues>({
@@ -49,30 +46,26 @@ const SignIn = () => {
     setIsLoading(true);
     
     try {
-      const response = await fetch(`${API_URL}/auth/login.php`, {
+      const response = await fetch("http://localhost/PFE/api/auth/login.php", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'X-Requested-With': 'XMLHttpRequest'
         },
-        credentials: 'include',
         body: JSON.stringify(values),
       });
-
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error('Réponse non-JSON reçue du serveur');
-      }
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || 'Erreur de connexion');
+        throw new Error(data.message || 'Erreur de connexion');
       }
 
-      // Stocker les informations de l'utilisateur
-      localStorage.setItem('user', JSON.stringify(data.user));
+      // Stocker les tokens et les informations utilisateur
+      localStorage.setItem('access_token', data.data.tokens.access_token);
+      localStorage.setItem('refresh_token', data.data.tokens.refresh_token);
+      localStorage.setItem('user', JSON.stringify(data.data.user));
       
       toast({
         title: "Connexion réussie",
