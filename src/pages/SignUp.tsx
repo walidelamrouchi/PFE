@@ -17,6 +17,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { API_URL } from '@/config/api';
 
 // Schéma de validation pour l'inscription
 const signupFormSchema = z.object({
@@ -53,12 +54,14 @@ const SignUp = () => {
   const onSignupSubmit = async (values: SignupFormValues) => {
     setIsLoading(true);
     try {
-      const response = await fetch("http://localhost/PFE/api/auth/register.php", {
+      const response = await fetch(`${API_URL}/auth/register.php`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
         },
+        credentials: 'include',
         body: JSON.stringify({
           name: values.name,
           email: values.email,
@@ -66,16 +69,15 @@ const SignUp = () => {
         })
       });
 
-      let data;
       const contentType = response.headers.get("content-type");
-      if (contentType && contentType.indexOf("application/json") !== -1) {
-        data = await response.json();
-      } else {
+      if (!contentType || !contentType.includes("application/json")) {
         throw new Error('Réponse non-JSON reçue du serveur');
       }
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error(data.message || 'Erreur lors de l\'inscription');
+        throw new Error(data.message || data.error || 'Erreur lors de l\'inscription');
       }
       
       toast({

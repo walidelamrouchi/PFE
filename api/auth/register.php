@@ -7,11 +7,19 @@ ini_set('display_errors', 0);
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept");
+header("Access-Control-Max-Age: 3600");
 
 // Gérer les requêtes OPTIONS
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
+    exit();
+}
+
+// Vérifier si c'est une requête POST
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['error' => 'Méthode non autorisée']);
     exit();
 }
 
@@ -21,11 +29,6 @@ try {
     // Créer une instance de Database et obtenir la connexion
     $database = new Database();
     $db = $database->getConnection();
-
-    // Vérifier la méthode
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        throw new Exception('Méthode non autorisée', 405);
-    }
 
     // Récupérer et décoder les données JSON
     $input = file_get_contents("php://input");
