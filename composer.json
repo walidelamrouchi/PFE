@@ -1,0 +1,14 @@
+{
+    "name": "findit/api",
+    "description": "API pour l'application FindIt",
+    "type": "project",
+    "require": {
+        "php": ">=7.4",
+        "firebase/php-jwt": "^6.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "FindIt\\": "src/"
+        }
+    }
+} 

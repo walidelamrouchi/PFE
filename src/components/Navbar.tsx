@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, Home, Search, FileSignature } from 'lucide-react';
+import { Menu, X, Home, Search, FileSignature, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -11,11 +11,45 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
+interface UserData {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+}
+
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState<UserData | null>(null);
+
+  // Fonction pour vérifier l'état de connexion
+  const checkAuthStatus = () => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        setUser(userData);
+        setIsLoggedIn(true);
+      } catch (error) {
+        console.error('Erreur lors de la lecture des données utilisateur:', error);
+        localStorage.removeItem('user');
+        setIsLoggedIn(false);
+        setUser(null);
+      }
+    } else {
+      setIsLoggedIn(false);
+      setUser(null);
+    }
+  };
+
+  // Vérifier l'état de connexion au chargement et lors des changements de route
+  useEffect(() => {
+    checkAuthStatus();
+  }, [window.location.pathname]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -29,6 +63,14 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    setIsLoggedIn(false);
+    setUser(null);
+    navigate('/');
+  };
 
   const menuItems = [
     { label: 'Accueil', href: '/' },
@@ -78,16 +120,41 @@ const Navbar = () => {
                   </div>
 
                   <div className="pt-4 border-t space-y-3">
-                    <Button variant="outline" className="w-full" asChild>
-                      <Link to="/sign-in" onClick={() => setIsOpen(false)}>
-                        Se connecter
-                      </Link>
-                    </Button>
-                    <Button className="w-full" asChild>
-                      <Link to="/sign-up" onClick={() => setIsOpen(false)}>
-                        S'inscrire
-                      </Link>
-                    </Button>
+                    {isLoggedIn ? (
+                      <>
+                        <Link
+                          to="/profile"
+                          className="flex items-center gap-2 text-lg font-medium hover:text-primary transition-colors"
+                          onClick={() => setIsOpen(false)}
+                        >
+                          <User className="h-5 w-5" />
+                          Mon Profil
+                        </Link>
+                        <Button 
+                          variant="outline" 
+                          className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => {
+                            handleLogout();
+                            setIsOpen(false);
+                          }}
+                        >
+                          Déconnexion
+                        </Button>
+                      </>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        <Button variant="outline" className="w-full" asChild>
+                          <Link to="/sign-in" onClick={() => setIsOpen(false)}>
+                            Se connecter
+                          </Link>
+                        </Button>
+                        <Button className="w-full" asChild>
+                          <Link to="/sign-up" onClick={() => setIsOpen(false)}>
+                            S'inscrire
+                          </Link>
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </SheetContent>
@@ -100,7 +167,7 @@ const Navbar = () => {
             </span>
           </Link>
           
-          <nav className="hidden md:flex space-x-8  " >
+          <nav className="hidden md:flex space-x-8">
             {menuItems.map((item) => (
               <Link 
                 key={item.href}
@@ -108,30 +175,75 @@ const Navbar = () => {
                 className={`flex items-center gap-1 hover:text-primary transition-colors`}
               >
                 {item.label}
-              </Link>
+        </Link>
             ))}
           </nav>
           
           <div className="hidden md:flex items-center space-x-4">
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" asChild>
-                <Link to="/sign-in">Se connecter</Link>
-              </Button>
-              <Button variant="default" size="sm" asChild>
-                <Link to="/sign-up">S'inscrire</Link>
-              </Button>
-            </div>
+            {isLoggedIn ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-full">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem className="font-medium">
+                    {user?.name}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile">Mon Profil</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/my-items">Mes objets</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLogout}>
+                    Déconnexion
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <Link to="/sign-in">
+                  <Button variant="ghost">Connexion</Button>
+        </Link>
+                <Link to="/sign-up">
+                  <Button>Inscription</Button>
+        </Link>
+      </div>
+            )}
           </div>
           
           <div className="flex md:hidden">
-            <Button 
-              variant="outline"
-              size="sm"
-              asChild
-              className={isScrolled ? 'text-gray-900' : 'text-gray-600'}
-            >
-              <Link to="/sign-in">Connexion</Link>
-            </Button>
+            {isLoggedIn ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-full">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem className="font-medium">
+                    {user?.name}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile">Mon Profil</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/my-items">Mes objets</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLogout}>
+                    Déconnexion
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link to="/sign-in">
+                <Button variant="ghost" size="sm">
+                  Connexion
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -150,21 +262,45 @@ const Navbar = () => {
               </Link>
             ))}
             <div className="flex flex-col gap-2 mt-4">
-              <Button 
-                variant="outline"
-                className="w-full"
-                asChild
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <Link to="/sign-in">Se connecter</Link>
-              </Button>
-              <Button 
-                className="w-full" 
-                asChild
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <Link to="/sign-up">S'inscrire</Link>
-              </Button>
+              {isLoggedIn ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-full">
+                      <User className="h-5 w-5 mr-2" />
+                      {user?.name}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem asChild>
+                      <Link to="/profile">Mon Profil</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/my-items">Mes objets</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleLogout}>
+                      Déconnexion
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <Button 
+                    variant="outline"
+                    className="w-full"
+                    asChild
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <Link to="/sign-in">Se connecter</Link>
+                  </Button>
+                  <Button 
+                    className="w-full" 
+                    asChild
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <Link to="/sign-up">S'inscrire</Link>
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </div>

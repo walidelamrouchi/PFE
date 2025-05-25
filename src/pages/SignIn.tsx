@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Adresse email invalide' }),
@@ -47,43 +48,42 @@ const SignIn = () => {
     setIsLoading(true);
     
     try {
-      // Simuler un délai de connexion
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Pour la démonstration, nous allons vérifier si les identifiants correspondent
-      // à l'administrateur que l'utilisateur a spécifié
-      if (values.email === 'walidelamrouchi@gmail.com' && values.password === 'walid1234') {
-        // Simuler une connexion réussie avec le rôle admin
-        localStorage.setItem('user', JSON.stringify({
-          email: values.email,
-          user_metadata: { role: 'admin' }
-        }));
-        
-        toast({
-          title: "Connexion réussie",
-          description: "Bienvenue administrateur !",
-        });
-        
-        navigate(from);
+      const response = await fetch("http://localhost/PFE/api/auth/login.php", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(values),
+      });
+
+      let data;
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        data = await response.json();
       } else {
-        // Simuler une connexion normale
-        localStorage.setItem('user', JSON.stringify({
-          email: values.email,
-          user_metadata: { role: 'user' }
-        }));
-        
-        toast({
-          title: "Connexion réussie",
-          description: "Bienvenue !",
-        });
-        
-        navigate(from);
+        throw new Error('Réponse non-JSON reçue du serveur');
       }
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Erreur de connexion');
+      }
+
+      // Stocker les informations de l'utilisateur
+      localStorage.setItem('user', JSON.stringify(data.user));
+      
+      toast({
+        title: "Connexion réussie",
+        description: "Bienvenue !",
+      });
+      
+      navigate(from);
     } catch (error) {
+      console.error('Erreur de connexion:', error);
       toast({
         variant: "destructive",
         title: "Erreur de connexion",
-        description: "Identifiants invalides. Veuillez réessayer.",
+        description: error instanceof Error ? error.message : "Identifiants invalides. Veuillez réessayer.",
       });
     } finally {
       setIsLoading(false);

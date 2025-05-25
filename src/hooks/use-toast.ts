@@ -186,5 +186,5 @@ function useToast() {
     dismiss: (toastId?: string) => dispatch({ type: actionTypes.DISMISS_TOAST, toastId }),
   }
 }
-
 export { useToast, toast }
+

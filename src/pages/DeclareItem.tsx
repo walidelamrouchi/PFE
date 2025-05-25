@@ -1,469 +1,327 @@
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { CalendarIcon, Loader2, Upload } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-// Schéma de validation
-const formSchema = z.object({
-  title: z.string().min(5, "Le titre doit contenir au moins 5 caractères"),
-  description: z.string().min(10, "La description doit contenir au moins 10 caractères"),
-  category: z.string().min(1, "Veuillez sélectionner une catégorie"),
-  type: z.enum(["lost", "found"]),
-  location: z.string().min(3, "Veuillez indiquer un lieu"),
-  date: z.date(),
-  imageUrl: z.string().optional(),
-  email: z.string().email("Format d'email invalide").optional(),
-  authQuestion: z.string().min(5, "La question doit contenir au moins 5 caractères"),
-  authAnswer: z.string().min(10, "La réponse doit contenir au moins 10 caractères"),
-});
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import declarationService, { Category, DeclarationData, ObjetData } from '@/services/declaration.service';
 
-type FormValues = z.infer<typeof formSchema>;
+export default function DeclareItem() {
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const { toast } = useToast();
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const [type, setType] = useState<'lost' | 'found'>('lost');
+  const [fetching, setFetching] = useState(!!id);
 
-// Liste des catégories disponibles
-const categories = [
-  'Téléphone', 'Ordinateur', 'Vêtement', 'Bijou', 'Clés',
-  'Portefeuille', 'Sac', 'Document', 'Lunettes', 'Animal', 'Autre'
-];
-
-// Email enregistré (simulé pour le frontend)
-const registeredEmail = "utilisateur@example.com";
-
-const DeclareItem = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [formData, setFormData] = useState<FormValues | null>(null);
-  const [emailChoice, setEmailChoice] = useState<"registered" | "custom">("registered");
-
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      title: "",
-      description: "",
-      category: "",
-      type: "lost",
-      location: "",
-      date: new Date(),
-      imageUrl: "",
-      email: registeredEmail,
-      authQuestion: "",
-      authAnswer: "",
-    }
+  const [objetData, setObjetData] = useState<ObjetData>({
+    title: '',
+    description: '',
+    category_id: 0,
+    image_url: ''
   });
 
+  const [declarationData, setDeclarationData] = useState<Omit<DeclarationData, 'objet'>>({
+    type: 'lost',
+    location: '',
+    date_incident: '',
+    contact_email: '',
+    auth_question: '',
+    auth_answer: ''
+  });
+  type DeclarationState = Omit<DeclarationData, 'objet'> & {
+    returned?: number; // Ajouter la propriété 'returned' comme optionnelle
+  };
+  const isReturned = (declarationData as DeclarationState).returned === 1;
+
+  useEffect(() => {
+    loadCategories();
+    if (id) {
+      setFetching(true);
+      declarationService.getDeclarationDetail(Number(id))
+        .then((data) => {
+          if (data) {
+            setObjetData({
+              title: data.title,
+              description: data.description,
+              category_id: data.category_id,
+              image_url: data.image_url || ''
+            });
+            setDeclarationData({
+              type: data.type,
+              location: data.location,
+              date_incident: data.date_incident,
+              contact_email: data.contact_email,
+              auth_question: data.auth_question || '',
+              auth_answer: data.auth_answer || ''
+            });
+            setType(data.type);
+            setImagePreview(data.image_url || '');
+          }
+        })
+        .finally(() => setFetching(false));
+    }
+    // eslint-disable-next-line
+  }, [id]);
+
+  const loadCategories = async () => {
+    try {
+      const data = await declarationService.getCategories();
+      setCategories(data);
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les catégories",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
       const reader = new FileReader();
-      
       reader.onloadend = () => {
-        const result = reader.result as string;
-        setImagePreview(result);
-        form.setValue('imageUrl', result);
+        setImagePreview(reader.result as string);
       };
-      
       reader.readAsDataURL(file);
     }
   };
 
-  const handleEmailChoiceChange = (value: "registered" | "custom") => {
-    setEmailChoice(value);
-    if (value === "registered") {
-      form.setValue('email', registeredEmail);
-    } else {
-      form.setValue('email', '');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      let imageUrl = objetData.image_url;
+      if (imageFile) {
+        imageUrl = await declarationService.uploadImage(imageFile);
+      }
+      const data: DeclarationData = {
+        objet: {
+          ...objetData,
+        image_url: imageUrl
+        },
+        ...declarationData,
+        type
+      };
+      if (id) {
+        await declarationService.updateDeclaration(Number(id), data);
+        toast({ title: 'Succès', description: 'Déclaration mise à jour.' });
+      } else {
+      await declarationService.createDeclaration(data);
+        toast({ title: 'Succès', description: 'Votre déclaration a été enregistrée avec succès' });
+      }
+      navigate('/my-items');
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de l'enregistrement",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const onSubmit = async (values: FormValues) => {
-    setIsLoading(true);
+  const handleMarkAsReturned = async () => {
+    if (!id) return;
+    setLoading(true);
     try {
-      // Simuler un délai de chargement
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Stocker les données du formulaire
-      setFormData(values);
-      
-      // Afficher les données dans la console
-      console.log('Données du formulaire:', values);
-      
-      // Réinitialiser le formulaire
-      form.reset();
-      setImagePreview(null);
-      setEmailChoice("registered");
-      
-      alert('Formulaire soumis avec succès !');
+      await declarationService.markAsReturned(Number(id));
+      toast({ title: 'Succès', description: 'Objet marqué comme rendu.' });
+      navigate('/my-items');
     } catch (error) {
-      console.error('Erreur lors de la soumission:', error);
-      alert('Une erreur est survenue lors de la soumission du formulaire.');
+      toast({ title: 'Erreur', description: "Impossible de marquer comme rendu.", variant: 'destructive' });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
+
+  const handleDelete = async () => {
+    if (!id) return;
+    if (!window.confirm('Voulez-vous vraiment supprimer cette déclaration ?')) return;
+    setLoading(true);
+    try {
+      await declarationService.deleteDeclaration(Number(id));
+      toast({ title: 'Succès', description: 'Déclaration supprimée.' });
+      navigate('/my-items');
+    } catch (error) {
+      toast({ title: 'Erreur', description: "Impossible de supprimer.", variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (fetching) {
+    return <div className="container mx-auto py-8 text-center">Chargement...</div>;
+  }
 
   return (
-    <div className="flex flex-col min-h-screen">
-        <Navbar />
-    <div className="flex-grow container max-w-4xl mx-auto px-4 sm:px-6 py-24">
-      <h1 className="text-3xl font-bold mb-8">Déclarer un objet perdu ou trouvé</h1>
-      
-      <div className="bg-white shadow-md rounded-lg p-6">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Type */}
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Type de déclaration</FormLabel>
+    <div className="container mx-auto py-8">
+      <Card className="max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle>{id ? 'Modifier la déclaration' : 'Déclarer un objet'}</CardTitle>
+          <CardDescription>
+            Remplissez ce formulaire pour {id ? 'modifier' : 'déclarer'} un objet perdu ou trouvé
+          </CardDescription>
+          {isReturned && (
+            <div className="mt-4">
+              <span className="inline-block px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full font-semibold">
+                ✅ Objet rendu
+              </span>
+            </div>
+          )}
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue={type} onValueChange={(value) => setType(value as 'lost' | 'found')}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="lost">Objet Perdu</TabsTrigger>
+              <TabsTrigger value="found">Objet Trouvé</TabsTrigger>
+            </TabsList>
+            <form onSubmit={handleSubmit} className="space-y-6 mt-6">
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="title">Titre</Label>
+                  <Input
+                    id="title"
+                    value={objetData.title}
+                    onChange={(e) => setObjetData({ ...objetData, title: e.target.value })}
+                    required
+                    disabled={isReturned}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="category">Catégorie</Label>
                   <Select
-                    disabled={isLoading}
-                    onValueChange={field.onChange}
-                    value={field.value}
+                    value={objetData.category_id.toString()}
+                    onValueChange={(value) => setObjetData({ ...objetData, category_id: parseInt(value) })}
+                    disabled={isReturned}
                   >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner un type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="lost">Objet perdu</SelectItem>
-                      <SelectItem value="found">Objet trouvé</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Lieu */}
-            <FormField
-              control={form.control}
-              name="location"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    {form.watch("type") === 'lost'
-                      ? 'Lieu de perte (approximatif)'
-                      : 'Lieu de découverte'}
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      disabled={isLoading}
-                      placeholder="Ex: Faculté des Sciences, Bibliothèque, etc."
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Date */}
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>
-                    {form.watch("type") === 'lost'
-                      ? 'Date de perte (approximative)'
-                      : 'Date de découverte'}
-                  </FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={'outline'}
-                          className={cn(
-                            'w-full pl-3 text-left font-normal',
-                            !field.value && 'text-muted-foreground'
-                          )}
-                          disabled={isLoading}
-                        >
-                          {field.value ? (
-                            format(field.value, 'PPP', { locale: fr })
-                          ) : (
-                            <span>Sélectionner une date</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) =>
-                          date > new Date() || date < new Date('1900-01-01')
-                        }
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Catégorie */}
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Catégorie</FormLabel>
-                  <Select
-                    disabled={isLoading}
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner une catégorie" />
-                      </SelectTrigger>
-                    </FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionnez une catégorie" />
+                    </SelectTrigger>
                     <SelectContent>
                       {categories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
+                        <SelectItem key={category.id} value={category.id.toString()}>
+                          {category.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Titre */}
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Titre</FormLabel>
-                  <FormControl>
-                    <Input
-                      disabled={isLoading}
-                      placeholder="Ex: iPhone 12 noir"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Description */}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      disabled={isLoading}
-                      placeholder="Décrivez l'objet avec le plus de détails possible"
-                      className="resize-none min-h-[120px]"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-           
-            {/* Image */}
-            <div className="space-y-2">
-              <FormLabel>Image de l'objet (optionnel)</FormLabel>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div 
-                  className={`border-2 border-dashed rounded-lg ${
-                    imagePreview ? 'border-primary' : 'border-border'
-                  } p-4 flex flex-col items-center justify-center h-40 relative overflow-hidden ${
-                    isLoading ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'
-                  }`}
-                  onClick={() => !isLoading && document.getElementById('image-upload')?.click()}
-                >
-                  <input
-                    id="image-upload"
+                </div>
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={objetData.description}
+                    onChange={(e) => setObjetData({ ...objetData, description: e.target.value })}
+                    required
+                    disabled={isReturned}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="location">Lieu</Label>
+                  <Input
+                    id="location"
+                    value={declarationData.location}
+                    onChange={(e) => setDeclarationData({ ...declarationData, location: e.target.value })}
+                    required
+                    disabled={isReturned}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="date_incident">Date</Label>
+                  <Input
+                    id="date_incident"
+                    type="date"
+                    value={declarationData.date_incident}
+                    onChange={(e) => setDeclarationData({ ...declarationData, date_incident: e.target.value })}
+                    required
+                    disabled={isReturned}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="contact_email">Email de contact</Label>
+                  <Input
+                    id="contact_email"
+                    type="email"
+                    value={declarationData.contact_email}
+                    onChange={(e) => setDeclarationData({ ...declarationData, contact_email: e.target.value })}
+                    required
+                    disabled={isReturned}
+                  />
+                </div>
+                {type === 'lost' && (
+                  <>
+                    <div>
+                      <Label htmlFor="auth_question">Question de sécurité</Label>
+                      <Input
+                        id="auth_question"
+                        value={declarationData.auth_question}
+                        onChange={(e) => setDeclarationData({ ...declarationData, auth_question: e.target.value })}
+                        required
+                        placeholder="Ex: Quelle est la marque de votre téléphone ?"
+                        disabled={isReturned}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="auth_answer">Réponse de sécurité</Label>
+                      <Input
+                        id="auth_answer"
+                        value={declarationData.auth_answer}
+                        onChange={(e) => setDeclarationData({ ...declarationData, auth_answer: e.target.value })}
+                        required
+                        placeholder="Ex: Samsung"
+                        disabled={isReturned}
+                      />
+                    </div>
+                  </>
+                )}
+                <div>
+                  <Label htmlFor="image">Photo</Label>
+                  <Input
+                    id="image"
                     type="file"
-                    className="hidden"
                     accept="image/*"
                     onChange={handleImageChange}
-                    disabled={isLoading}
+                    disabled={isReturned}
                   />
-                  
-                  {imagePreview ? (
-                    <img 
-                      src={imagePreview} 
-                      alt="Preview" 
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center text-muted-foreground">
-                      <Upload className="h-10 w-10 mb-2" />
-                      <span className="text-sm">Cliquez pour ajouter une image</span>
-                      <span className="text-xs">(recommandé)</span>
+                  {imagePreview && (
+                    <div className="mt-2">
+                      <img
+                        src={imagePreview}
+                        alt="Aperçu"
+                        className="max-w-xs rounded-lg"
+                      />
                     </div>
                   )}
                 </div>
-                
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    Une image claire aidera à l'identification de l'objet.
-                  </p>
-                  <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-1">
-                    <li>Prenez la photo avec un bon éclairage</li>
-                    <li>Montrez l'objet en entier</li>
-                    <li>Taille maximale : 5MB</li>
-                  </ul>
+              </div>
+              <Button type="submit" className="w-full" disabled={loading || isReturned}>
+                {loading ? (id ? 'Mise à jour...' : 'Enregistrement...') : (id ? 'Mettre à jour' : 'Enregistrer')}
+              </Button>
+              {id && (
+                <div className="flex gap-4 mt-4">
+                  <Button type="button" variant="secondary" className="w-full" onClick={handleMarkAsReturned} disabled={loading || isReturned}>
+                    Objet rendu ?
+                  </Button>
+                  <Button type="button" variant="destructive" className="w-full" onClick={handleDelete} disabled={loading || isReturned}>
+                    Supprimer l'objet
+                  </Button>
                 </div>
-              </div>
-            </div>
-
-            {/* Question d'authentification - uniquement pour les objets perdus */}
-            {form.watch("type") === "lost" && (
-              <div className="space-y-4 border-t pt-6 mt-6">
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold">Sécurisez votre objet</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Ajoutez une question d'authentification qui permettra de prouver votre bonne foi. 
-                    Donnez une information que vous êtes le seul à connaître sur votre objet.
-                  </p>
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="authQuestion"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Choisissez la question qui ne laissera aucun doute</FormLabel>
-                      <FormControl>
-                        <Input
-                          disabled={isLoading}
-                          placeholder="Ex: Quelle est la marque exacte de l'objet ?"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="authAnswer"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Répondez à votre question avec détails et précision</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          disabled={isLoading}
-                          placeholder="Ex: C'est un iPhone 12 Pro Max de 256GB en couleur Graphite, avec une coque en cuir noir Apple..."
-                          className="resize-none min-h-[100px]"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
-             {/* Email de contact */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <FormLabel>Email de contact</FormLabel>
-                <RadioGroup 
-                  defaultValue="registered" 
-                  className="flex flex-col space-y-2"
-                  onValueChange={(value) => handleEmailChoiceChange(value as "registered" | "custom")}
-                  value={emailChoice}
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="registered" id="registered" disabled={isLoading} />
-                    <FormLabel htmlFor="registered" className="cursor-pointer font-normal">
-                      Utiliser mon email d'inscription ({registeredEmail})
-                    </FormLabel>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="custom" id="custom" disabled={isLoading} />
-                    <FormLabel htmlFor="custom" className="cursor-pointer font-normal">
-                      Utiliser un autre email
-                    </FormLabel>
-                  </div>
-                </RadioGroup>
-              </div>
-              
-              {emailChoice === "custom" && (
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email personnalisé</FormLabel>
-                      <FormControl>
-                        <Input
-                          disabled={isLoading}
-                          placeholder="votre@email.com"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               )}
-            </div>
-
-            {/* Bouton de soumission */}
-            <Button disabled={isLoading} type="submit" className="w-full">
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Soumission en cours...
-                </>
-              ) : (
-                'Déclarer l\'objet'
-              )}
-            </Button>
-          </form>
-        </Form>
-
-        {/* Affichage des données soumises */}
-        {formData && (
-          <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-            <h2 className="text-lg font-semibold mb-4">Données soumises :</h2>
-            <pre className="text-sm overflow-auto">
-              {JSON.stringify(formData, null, 2)}
-            </pre>
-          </div>
-        )}
-      </div>
+            </form>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
-    <Footer />
-    </div>
-
   );
-};
-
-export default DeclareItem;
+}
