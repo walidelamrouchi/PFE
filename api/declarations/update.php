@@ -2,11 +2,13 @@
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
+// Configuration CORS
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: PUT, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-User-ID');
 header('Content-Type: application/json');
 
+// Gérer la requête OPTIONS (preflight)
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
@@ -14,54 +16,144 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once '../config/database.php';
 
-parse_str(file_get_contents("php://input"), $_PUT);
-$data = json_decode(file_get_contents("php://input"), true);
-
-if (!isset($_GET['id'])) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'ID manquant']);
+if ($_SERVER['REQUEST_METHOD'] !== 'PUT') {
+    http_response_code(405);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Méthode non autorisée'
+    ]);
     exit;
 }
 
-$id = intval($_GET['id']);
-
 try {
+    // Vérifier l'ID de l'utilisateur
+    $user_id = $_SERVER['HTTP_X_USER_ID'] ?? null;
+    if (!$user_id) {
+        throw new Exception('Utilisateur non authentifié');
+    }
+
+    // Vérifier si l'ID de la déclaration est fourni
+    if (!isset($_GET['id'])) {
+        throw new Exception('ID de déclaration manquant');
+    }
+
+    $declaration_id = $_GET['id'];
+
+    // Récupérer les données JSON
+    $data = json_decode(file_get_contents('php://input'), true);
+    
+    if (!$data || !isset($data['objet'])) {
+        throw new Exception('Données invalides');
+    }
+
+    // Validation des champs requis pour l'objet
+    $requiredObjetFields = ['title', 'description', 'category_id'];
+    foreach ($requiredObjetFields as $field) {
+        if (empty($data['objet'][$field])) {
+            throw new Exception("Le champ objet.$field est requis");
+        }
+    }
+
+    // Validation des champs requis pour la déclaration
+    $requiredDeclarationFields = ['type', 'location', 'date_incident', 'contact_email'];
+    foreach ($requiredDeclarationFields as $field) {
+        if (empty($data[$field])) {
+            throw new Exception("Le champ $field est requis");
+        }
+    }
+
+    // Connexion à la base de données
     $database = new Database();
     $db = $database->getConnection();
 
-    // Récupérer l'objet_id lié à la déclaration
-    $stmt = $db->prepare("SELECT objet_id FROM declarations WHERE id = ?");
-    $stmt->execute([$id]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$row) {
-        throw new Exception("Déclaration non trouvée");
+    // Vérifier si l'utilisateur existe
+    $stmt = $db->prepare("SELECT id FROM users WHERE id = ?");
+    $stmt->execute([$user_id]);
+    if (!$stmt->fetch()) {
+        throw new Exception('Utilisateur invalide');
     }
-    $objet_id = $row['objet_id'];
 
-    // Mettre à jour l'objet
-    $stmt = $db->prepare("UPDATE objets SET title = ?, description = ?, category_id = ?, image_url = ? WHERE id = ?");
-    $stmt->execute([
-        $data['objet']['title'],
-        $data['objet']['description'],
-        $data['objet']['category_id'],
-        $data['objet']['image_url'],
-        $objet_id
-    ]);
+    // Vérifier si la déclaration appartient à l'utilisateur
+    $stmt = $db->prepare("SELECT objet_id FROM declarations WHERE id = ? AND user_id = ?");
+    $stmt->execute([$declaration_id, $user_id]);
+    $declaration = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$declaration) {
+        throw new Exception('Déclaration non trouvée ou accès non autorisé');
+    }
 
-    // Mettre à jour la déclaration
-    $stmt = $db->prepare("UPDATE declarations SET type = ?, location = ?, date_incident = ?, contact_email = ?, auth_question = ?, auth_answer = ? WHERE id = ?");
-    $stmt->execute([
-        $data['type'],
-        $data['location'],
-        $data['date_incident'],
-        $data['contact_email'],
-        $data['auth_question'] ?? null,
-        $data['auth_answer'] ?? null,
-        $id
-    ]);
+    // Démarrer une transaction
+    $db->beginTransaction();
 
-    echo json_encode(['success' => true, 'message' => 'Déclaration mise à jour']);
+    try {
+        // Validation de la catégorie
+        $stmt = $db->prepare("SELECT id FROM categories WHERE id = ?");
+        $stmt->execute([$data['objet']['category_id']]);
+        if (!$stmt->fetch()) {
+            throw new Exception('Catégorie invalide');
+        }
+
+        // Mise à jour de l'objet
+        $query = "UPDATE objets SET 
+            title = :title,
+            description = :description,
+            category_id = :category_id,
+            image_url = :image_url,
+            updated_at = NOW()
+        WHERE id = :id";
+
+        $stmt = $db->prepare($query);
+        $stmt->bindParam(':title', $data['objet']['title']);
+        $stmt->bindParam(':description', $data['objet']['description']);
+        $stmt->bindParam(':category_id', $data['objet']['category_id']);
+        $stmt->bindParam(':image_url', $data['objet']['image_url']);
+        $stmt->bindParam(':id', $declaration['objet_id']);
+
+        if (!$stmt->execute()) {
+            throw new Exception('Erreur lors de la mise à jour de l\'objet');
+        }
+
+        // Mise à jour de la déclaration
+        $query = "UPDATE declarations SET 
+            type = :type,
+            location = :location,
+            date_incident = :date_incident,
+            contact_email = :contact_email,
+            auth_question = :auth_question,
+            auth_answer = :auth_answer
+        WHERE id = :id AND user_id = :user_id";
+
+        $stmt = $db->prepare($query);
+        $stmt->bindParam(':type', $data['type']);
+        $stmt->bindParam(':location', $data['location']);
+        $stmt->bindParam(':date_incident', $data['date_incident']);
+        $stmt->bindParam(':contact_email', $data['contact_email']);
+        $stmt->bindParam(':auth_question', $data['auth_question']);
+        $stmt->bindParam(':auth_answer', $data['auth_answer']);
+        $stmt->bindParam(':id', $declaration_id);
+        $stmt->bindParam(':user_id', $user_id);
+
+        if (!$stmt->execute()) {
+            throw new Exception('Erreur lors de la mise à jour de la déclaration');
+        }
+
+        // Valider la transaction
+        $db->commit();
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Déclaration mise à jour avec succès'
+        ]);
+
+    } catch (Exception $e) {
+        // Annuler la transaction en cas d'erreur
+        $db->rollBack();
+        throw $e;
+    }
+
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    echo json_encode([
+        'success' => false,
+        'message' => $e->getMessage()
+    ]);
 }

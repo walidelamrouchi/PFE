@@ -23,6 +23,7 @@ export interface DeclarationData {
   contact_email: string;
   auth_question?: string;
   auth_answer?: string;
+  user_id: number;
 }
 
 export interface ApiResponse<T> {
@@ -56,9 +57,17 @@ export interface DeclarationListItem {
   auth_question?: string;   
   auth_answer?: string; 
   returned?: number;
+  user_id: number;
 }
 
 class DeclarationService {
+  private getAuthHeader() {
+    const user = localStorage.getItem('user');
+    if (!user) return {};
+    const { id } = JSON.parse(user);
+    return { 'X-User-ID': id };
+  }
+
   async getCategories(): Promise<Category[]> {
     const response = await axios.get<ApiResponse<Category[]>>(`${API_URL}/declarations/categories.php`);
     return response.data.data || [];
@@ -71,6 +80,7 @@ class DeclarationService {
     const response = await axios.post<UploadResponse>(`${API_URL}/declarations/upload.php`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
+        ...this.getAuthHeader()
       },
     });
 
@@ -82,32 +92,44 @@ class DeclarationService {
   }
 
   async createDeclaration(data: DeclarationData): Promise<ApiResponse<void>> {
-    const response = await axios.post<ApiResponse<void>>(`${API_URL}/declarations/declare.php`, data);
+    const response = await axios.post<ApiResponse<void>>(`${API_URL}/declarations/declare.php`, data, {
+      headers: this.getAuthHeader()
+    });
     return response.data;
   }
 
   async getMyDeclarations(): Promise<DeclarationListItem[]> {
-    const response = await axios.get<ApiResponse<DeclarationListItem[]>>(`${API_URL}/declarations/list.php`);
+    const response = await axios.get<ApiResponse<DeclarationListItem[]>>(`${API_URL}/declarations/list.php`, {
+      headers: this.getAuthHeader()
+    });
     return response.data.data || [];
   }
 
   async getDeclarationDetail(id: number): Promise<DeclarationListItem | null> {
-    const response = await axios.get<ApiResponse<DeclarationListItem>>(`${API_URL}/declarations/detail.php?id=${id}`);
+    const response = await axios.get<ApiResponse<DeclarationListItem>>(`${API_URL}/declarations/detail.php?id=${id}`, {
+      headers: this.getAuthHeader()
+    });
     return response.data.data || null;
   }
 
   async updateDeclaration(id: number, data: DeclarationData): Promise<ApiResponse<void>> {
-    const response = await axios.put<ApiResponse<void>>(`${API_URL}/declarations/update.php?id=${id}`, data);
+    const response = await axios.put<ApiResponse<void>>(`${API_URL}/declarations/update.php?id=${id}`, data, {
+      headers: this.getAuthHeader()
+    });
     return response.data;
   }
 
   async markAsReturned(id: number): Promise<ApiResponse<void>> {
-    const response = await axios.post<ApiResponse<void>>(`${API_URL}/declarations/mark_returned.php`, { id });
+    const response = await axios.post<ApiResponse<void>>(`${API_URL}/declarations/mark_returned.php`, { id }, {
+      headers: this.getAuthHeader()
+    });
     return response.data;
   }
 
   async deleteDeclaration(id: number): Promise<ApiResponse<void>> {
-    const response = await axios.delete<ApiResponse<void>>(`${API_URL}/declarations/delete.php?id=${id}`);
+    const response = await axios.delete<ApiResponse<void>>(`${API_URL}/declarations/delete.php?id=${id}`, {
+      headers: this.getAuthHeader()
+    });
     return response.data;
   }
 }

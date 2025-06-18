@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS objets (
 CREATE TABLE IF NOT EXISTS declarations (
     id INT AUTO_INCREMENT PRIMARY KEY,
     objet_id INT NOT NULL,
+    user_id INT NOT NULL,
     type ENUM('lost', 'found') NOT NULL,
     location VARCHAR(255) NOT NULL,
     date_incident DATE NOT NULL,
@@ -44,7 +45,8 @@ CREATE TABLE IF NOT EXISTS declarations (
     auth_question TEXT,
     auth_answer TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (objet_id) REFERENCES objets(id)
+    FOREIGN KEY (objet_id) REFERENCES objets(id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- Insertion des catégories par défaut

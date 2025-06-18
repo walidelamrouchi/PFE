@@ -10,6 +10,9 @@ import SignUp from "./pages/SignUp";
 import SignIn from "./pages/SignIn";
 import MyItems from "./pages/MyItems";
 import ItemDetail from "./pages/itemDetail";
+import MatchingPage from "./pages/MatchingPage";
+import AllMatches from "./pages/AllMatches";
+
 const queryClient = new QueryClient();
 
 // Composant de protection de route intégré
@@ -19,6 +22,14 @@ const ProtectedDeclareItem = () => {
     return <Navigate to="/sign-in" replace />;
   }
   return <DeclareItem />;
+};
+
+const ProtectedMatchingPage = () => {
+  const user = localStorage.getItem('user');
+  if (!user) {
+    return <Navigate to="/sign-in" replace />;
+  }
+  return <MatchingPage />;
 };
 
 const App = () => (
@@ -35,6 +46,8 @@ const App = () => (
           <Route path="/sign-in" element={<SignIn />} />
           <Route path="/my-items" element={<MyItems />} />
           <Route path="/item/:id" element={<ItemDetail />} />
+          <Route path="/matching/:id" element={<ProtectedMatchingPage />} />
+          <Route path="/matches" element={<AllMatches />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>

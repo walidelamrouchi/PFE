@@ -48,8 +48,9 @@ const MyItems = () => {
     }
   };
   return (
-    <div className="min-h-screen flex flex-col bg-muted/50">
+    <div className="container mx-auto py-8">
       <Navbar />
+      <div className="container mx-auto py-8">
       <main className="flex-grow container mx-auto py-8">
         <h2 className="text-xl font-semibold mb-6 text-emerald-900">Mes objets</h2>
         {loading ? (
@@ -144,6 +145,7 @@ const MyItems = () => {
           )}
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 };

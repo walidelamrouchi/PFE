@@ -5,7 +5,7 @@ error_reporting(E_ALL);
 // Configuration CORS
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-User-ID');
 header('Content-Type: application/json');
 
 // Gérer la requête OPTIONS (preflight)
@@ -26,6 +26,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 try {
+    // Vérifier l'ID de l'utilisateur
+    $user_id = $_SERVER['HTTP_X_USER_ID'] ?? null;
+    if (!$user_id) {
+        throw new Exception('Utilisateur non authentifié');
+    }
+
     // Récupérer les données JSON
     $data = json_decode(file_get_contents('php://input'), true);
     
@@ -52,6 +58,13 @@ try {
     // Connexion à la base de données
     $database = new Database();
     $db = $database->getConnection();
+
+    // Vérifier si l'utilisateur existe
+    $stmt = $db->prepare("SELECT id FROM users WHERE id = ?");
+    $stmt->execute([$user_id]);
+    if (!$stmt->fetch()) {
+        throw new Exception('Utilisateur invalide');
+    }
 
     // Démarrer une transaction
     $db->beginTransaction();
@@ -94,6 +107,7 @@ try {
         // Insertion de la déclaration
         $query = "INSERT INTO declarations (
             objet_id,
+            user_id,
         type, 
         location, 
         date_incident, 
@@ -103,6 +117,7 @@ try {
         created_at
     ) VALUES (
             :objet_id,
+            :user_id,
         :type,
         :location,
         :date_incident,
@@ -114,6 +129,7 @@ try {
 
     $stmt = $db->prepare($query);
         $stmt->bindParam(':objet_id', $objet_id);
+        $stmt->bindParam(':user_id', $user_id);
     $stmt->bindParam(':type', $data['type']);
     $stmt->bindParam(':location', $data['location']);
     $stmt->bindParam(':date_incident', $data['date_incident']);

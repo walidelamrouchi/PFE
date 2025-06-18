@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import declarationService, { Category, DeclarationData, ObjetData } from '@/services/declaration.service';
-
+import Navbar from '@/components/Navbar';
 export default function DeclareItem() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -34,7 +34,8 @@ export default function DeclareItem() {
     date_incident: '',
     contact_email: '',
     auth_question: '',
-    auth_answer: ''
+    auth_answer: '',
+    user_id: JSON.parse(localStorage.getItem('user') || '{}').id
   });
   type DeclarationState = Omit<DeclarationData, 'objet'> & {
     returned?: number; // Ajouter la propriété 'returned' comme optionnelle
@@ -60,7 +61,8 @@ export default function DeclareItem() {
               date_incident: data.date_incident,
               contact_email: data.contact_email,
               auth_question: data.auth_question || '',
-              auth_answer: data.auth_answer || ''
+              auth_answer: data.auth_answer || '',
+              user_id: JSON.parse(localStorage.getItem('user') || '{}').id
             });
             setType(data.type);
             setImagePreview(data.image_url || '');
@@ -166,6 +168,8 @@ export default function DeclareItem() {
 
   return (
     <div className="container mx-auto py-8">
+        <Navbar />
+        <div className="container mx-auto py-8">
       <Card className="max-w-2xl mx-auto">
         <CardHeader>
           <CardTitle>{id ? 'Modifier la déclaration' : 'Déclarer un objet'}</CardTitle>
@@ -322,6 +326,7 @@ export default function DeclareItem() {
           </Tabs>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
